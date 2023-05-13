@@ -23,6 +23,7 @@ declare namespace Eris {
   type MessageApplicationCommand = Omit<ApplicationCommand<Constants["ApplicationCommandTypes"]["MESSAGE"]>, "description" | "options">;
   type MessageApplicationCommandStructure = Omit<MessageApplicationCommand, "id" | "application_id" | "guild_id">;
   type UserApplicationCommand = Omit<ApplicationCommand<Constants["ApplicationCommandTypes"]["USER"]>, "description" | "options">;
+  type ModalSubmitInteractionDataComponent = ModalSubmitInteractionDataTextInputComponent;
   type UserApplicationCommandStructure = Omit<UserApplicationCommand, "id" | "application_id" | "guild_id">;
   type ApplicationCommandOptions = ApplicationCommandOptionsSubCommand | ApplicationCommandOptionsSubCommandGroup | ApplicationCommandOptionsWithValue;
   type ApplicationCommandOptionsBoolean = ApplicationCommandOption<Constants["ApplicationCommandOptionTypes"]["BOOLEAN"]>;
@@ -1112,6 +1113,11 @@ declare namespace Eris {
     type: T;
     value: V;
   }
+  interface InteractionModalContent {
+    title: string;
+    custom_id: string;
+    components: ModalContentActionRow[];
+  }
   interface InteractionOptions {
     data?: InteractionCallbackData;
     type: InteractionResponseTypes;
@@ -1192,6 +1198,10 @@ declare namespace Eris {
   // Message
   interface ActionRow {
     components: ActionRowComponents[];
+    type: Constants["ComponentTypes"]["ACTION_ROW"];
+  }
+  interface ModalContentActionRow {
+    components: TextInput[];
     type: Constants["ComponentTypes"]["ACTION_ROW"];
   }
   interface ActiveMessages {
@@ -1336,6 +1346,23 @@ declare namespace Eris {
   interface URLButton extends ButtonBase {
     style: Constants["ButtonStyles"]["LINK"];
     url: string;
+  }
+    
+  // Modals
+  interface ModalSubmitInteractionDataComponents {
+    components: ModalSubmitInteractionDataComponent[];
+    type: Constants["ComponentTypes"]["ACTION_ROW"];
+  }
+
+  interface ModalSubmitInteractionDataTextInputComponent {
+    custom_id: string;
+    type: Constants["ComponentTypes"]["TEXT_INPUT"];
+    value: string;
+  }
+
+  interface ModalSubmitInteractionData {
+    custom_id: string;
+    components: ModalSubmitInteractionDataComponents[];
   }
 
   // Presence
@@ -1686,6 +1713,7 @@ declare namespace Eris {
       ACTION_ROW:  1;
       BUTTON:      2;
       SELECT_MENU: 3;
+      TEXT_INPUT:  4;
     };
     ConnectionVisibilityTypes: {
       NONE:     0;
@@ -1803,12 +1831,14 @@ declare namespace Eris {
       DEFERRED_UPDATE_MESSAGE:                 6;
       UPDATE_MESSAGE:                          7;
       APPLICATION_COMMAND_AUTOCOMPLETE_RESULT: 8;
+      MODAL:                                   9;
     };
     InteractionTypes: {
       PING:                             1;
       APPLICATION_COMMAND:              2;
       MESSAGE_COMPONENT:                3;
       APPLICATION_COMMAND_AUTOCOMPLETE: 4;
+      MODAL_SUBMIT:                     5;
     };
     InviteTargetTypes: {
       STREAM:               1;
@@ -3123,6 +3153,7 @@ declare namespace Eris {
     acknowledge(flags?: number): Promise<void>;
     createFollowup(content: string | InteractionContent, file?: FileContent | FileContent[]): Promise<Message>;
     createMessage(content: string | InteractionContent , file?: FileContent | FileContent[]): Promise<void>;
+    createModal(content: InteractionModalContent): Promise<void>;
     defer(flags?: number): Promise<void>;
     deleteMessage(messageID: string): Promise<void>;
     deleteOriginalMessage(): Promise<void>;
@@ -3154,6 +3185,7 @@ declare namespace Eris {
     acknowledge(): Promise<void>;
     createFollowup(content: string | InteractionContent, file?: FileContent | FileContent[]): Promise<Message>;
     createMessage(content: string | InteractionContent, file?: FileContent | FileContent[]): Promise<void>;
+    createModal(content: InteractionModalContent): Promise<void>;
     defer(flags?: number): Promise<void>;
     deferUpdate(): Promise<void>;
     deleteMessage(messageID: string): Promise<void>;
@@ -3325,6 +3357,26 @@ declare namespace Eris {
     removeReactionEmoji(reaction: string): Promise<void>;
     removeReactions(): Promise<void>;
     unpin(): Promise<void>;
+  }
+    
+  export class ModalSubmitInteraction<T extends PossiblyUncachedTextable = TextableChannel> extends Interaction {
+    channel: T;
+    data: ModalSubmitInteractionData;
+    guildID?: string;
+    member?: Member;
+    type: Constants["InteractionTypes"]["MODAL_SUBMIT"];
+    user?: User;
+    acknowledge(): Promise<void>;
+    createFollowup(content: string | InteractionContent, file?: FileContent | FileContent[]): Promise<Message>;
+    createMessage(content: string | InteractionContent, file?: FileContent | FileContent[]): Promise<void>;
+    defer(flags?: number): Promise<void>;
+    deferUpdate(): Promise<void>;
+    deleteMessage(messageID: string): Promise<void>;
+    deleteOriginalMessage(): Promise<void>;
+    editMessage(messageID: string, content: string | InteractionContentEdit, file?: FileContent | FileContent[]): Promise<Message>;
+    editOriginalMessage(content: string | InteractionContentEdit, file?: FileContent | FileContent[]): Promise<Message>;
+    editParent(content: InteractionContentEdit, file?: FileContent | FileContent[]): Promise<void>;
+    getOriginalMessage(): Promise<Message>
   }
 
   // News channel rate limit is always 0
