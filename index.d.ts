@@ -13,6 +13,8 @@ declare namespace Eris {
   export const Constants: Constants;
   export const VERSION: string;
 
+  export const PrivateChannel: typeof DMChannel;
+
   // TYPES
 
   // Application Commands
@@ -50,25 +52,27 @@ declare namespace Eris {
   interface Uncached { id: string }
 
   // Channel
-  type AnyChannel = AnyGuildChannel | PrivateChannel;
-  type AnyGuildChannel = GuildTextableChannel | AnyVoiceChannel | CategoryChannel | ForumChannel;
+  type AnyChannel = AnyGuildChannel | AnyThreadChannel | DMChannel | GroupChannel;
+  type AnyGuildChannel = AnyGuildTextableChannel | AnyVoiceChannel | CategoryChannel | ForumChannel;
+  type AnyGuildTextableChannel = TextChannel | VoiceChannel | NewsChannel;
   type AnyThreadChannel = NewsThreadChannel | PrivateThreadChannel | PublicThreadChannel | ThreadChannel;
-  type AnyVoiceChannel = TextVoiceChannel | StageChannel;
+  type AnyVoiceChannel = VoiceChannel | StageChannel;
   type ChannelTypeConversion<T extends GuildChannelTypes> =
     T extends Constants["ChannelTypes"]["GUILD_TEXT"] ? TextChannel :
-      T extends Constants["ChannelTypes"]["GUILD_VOICE"] ? TextVoiceChannel :
+      T extends Constants["ChannelTypes"]["GUILD_VOICE"] ? VoiceChannel :
         T extends Constants["ChannelTypes"]["GUILD_CATEGORY"] ? CategoryChannel :
           T extends Constants["ChannelTypes"]["GUILD_NEWS"] ? NewsChannel :
             T extends Constants["ChannelTypes"]["GUILD_STAGE_VOICE"] ? StageChannel :
               T extends Constants["ChannelTypes"]["GUILD_FORUM"] ? ForumChannel :
                 never;
-  type GuildTextableChannel = TextChannel | TextVoiceChannel | NewsChannel;
-  type GuildTextableWithThread = GuildTextableChannel | AnyThreadChannel;
+  type EditGuildChannelOptions = EditForumChannelOptions | EditMediaChannelOptions | EditGuildTextableChannelOptions;
+  type EditGuildTextableChannelOptions = EditNewsChannelOptions | EditTextChannelOptions | EditThreadChannelOptions | EditVoiceChannelOptions;
+  type GuildTextableWithThreads = AnyGuildTextableChannel | AnyThreadChannel;
   type InviteChannel = InvitePartialChannel | Exclude<AnyGuildChannel, CategoryChannel | AnyThreadChannel>;
   type PossiblyUncachedSpeakableChannel = VoiceChannel | StageChannel | Uncached;
   type PossiblyUncachedTextable = Textable | Uncached;
   type PossiblyUncachedTextableChannel = TextableChannel | Uncached;
-  type TextableChannel = (GuildTextable & GuildTextableChannel) | (ThreadTextable & AnyThreadChannel) | (Textable & PrivateChannel);
+  type TextableChannel = (GuildTextable & AnyGuildTextableChannel) | (GuildTextable & AnyThreadChannel) | (Textable & DMChannel);
   type VideoQualityMode = Constants["VideoQualityModes"][keyof Constants["VideoQualityModes"]];
   type ChannelTypes = GuildChannelTypes | PrivateChannelTypes;
   type GuildChannelTypes = Exclude<Constants["ChannelTypes"][keyof Constants["ChannelTypes"]], PrivateChannelTypes>;
@@ -103,6 +107,9 @@ declare namespace Eris {
   type GuildScheduledEventPrivacyLevel = Constants["GuildScheduledEventPrivacyLevel"][keyof Constants["GuildScheduledEventPrivacyLevel"]];
   type GuildScheduledEventStatus = Constants["GuildScheduledEventStatus"][keyof Constants["GuildScheduledEventStatus"]];
   type NSFWLevel = Constants["GuildNSFWLevels"][keyof Constants["GuildNSFWLevels"]];
+  type OnboardingModes = Constants["GuildOnboardingModes"][keyof Constants["GuildOnboardingModes"]];
+  type OnboardingPromptTypes = Constants["GuildOnboardingPromptTypes"][keyof Constants["GuildOnboardingPromptTypes"]];
+  type PermissionValueTypes = BigInt | number | string;
   type PossiblyUncachedGuild = Guild | Uncached;
   type PossiblyUncachedGuildScheduledEvent = GuildScheduledEvent | Uncached;
   type PremiumTier = Constants["PremiumTiers"][keyof Constants["PremiumTiers"]];
@@ -335,11 +342,9 @@ declare namespace Eris {
     channel_id: string;
     webhook_id: string;
   }
-  interface ChannelPosition {
+  interface ChannelPosition extends EditChannelPositionOptions {
     id: string;
-    position: number;
-    lockPermissions?: boolean;
-    parentID?: string;
+    position?: number;
   }
   interface CreateChannelOptions {
     availableTags?: ForumTag[];
@@ -358,28 +363,63 @@ declare namespace Eris {
     topic?: string;
     userLimit?: number;
   }
-  interface EditChannelOptions extends Omit<CreateChannelOptions, "reason"> {
+  interface EditChannelOptionsBase {
+    name?: string;
+    position?: number;
+    permissionOverwrites?: Overwrite[];
+  }
+  interface EditNewsChannelOptions extends EditChannelOptionsBase {
+    defaultAutoArchiveDuration?: AutoArchiveDuration | null;
+    nsfw?: boolean | null;
+    parentID?: string | null;
+    topic?: string | null;
+    type?: GuildTextChannelTypes;
+  }
+  interface EditTextChannelOptions extends EditNewsChannelOptions {
+    defaultThreadRateLimitPerUser?: number | null;
+    rateLimitPerUser?: number | null;
+  }
+  interface EditVoiceChannelOptions extends EditChannelOptionsBase {
+    bitrate?: number | null;
+    nsfw?: boolean | null;
+    parentID?: string | null;
+    rateLimitPerUser?: number | null;
+    rtcRegion?: string | null;
+    userLimit?: number | null;
+    videoQualityMode?: VideoQualityMode | null;
+  }
+  interface EditMediaChannelOptions extends EditChannelOptionsBase {
+    availableTags?: ForumTag[];
+    defaultAutoArchiveDuration?: AutoArchiveDuration | null;
+    defaultReactionEmoji?: DefaultReactionEmoji | null;
+    defaultSortOrder?: SortOrderTypes | null;
+    defaultThreadRateLimitPerUser?: number;
+    flags?: ChannelFlags;
+    nsfw?: boolean | null;
+    parentID?: string | null;
+    rateLimitPerUser?: number | null;
+    topic?: string | null;
+  }
+  interface EditForumChannelOptions extends EditMediaChannelOptions {
+    defaultForumLayout?: ForumLayoutTypes | null;
+  }
+  interface EditThreadChannelOptions {
     appliedTags?: string[];
     archived?: boolean;
     autoArchiveDuration?: AutoArchiveDuration;
-    availableTags?: ForumTag[];
-    defaultAutoArchiveDuration?: AutoArchiveDuration;
-    defaultForumLayout?: ForumLayoutTypes;
-    defaultReactionEmoji?: DefaultReactionEmoji;
-    defaultSortOrder?: SortOrderTypes;
-    defaultThreadRateLimitPerUser?: number;
-    flags?: number;
-    icon?: string;
+    flags?: ChannelFlags;
     invitable?: boolean;
     locked?: boolean;
     name?: string;
-    ownerID?: string;
-    rtcRegion?: string | null;
-    videoQualityMode?: VideoQualityMode;
+    rateLimitPerUser?: number | null;
   }
   interface EditChannelPositionOptions {
-    lockPermissions?: string;
+    lockPermissions?: boolean;
     parentID?: string;
+  }
+  interface EditGroupChannelOptions {
+    icon?: string | null;
+    name?: string;
   }
   interface GetMessagesOptions {
     after?: string;
@@ -387,18 +427,19 @@ declare namespace Eris {
     before?: string;
     limit?: number;
   }
-  interface GuildPinnable extends Pinnable {
-    lastPinTimestamp: number | null;
-    topic?: string | null;
+  interface GroupRecipientOptions {
+    accessToken: string;
+    nick?: string;
   }
   interface GuildTextable extends Textable {
     rateLimitPerUser: number;
-    createWebhook(options: { name: string; avatar?: string | null }, reason?: string): Promise<Webhook>;
-    deleteMessages(messageIDs: string[], reason?: string): Promise<void>;
-    getWebhooks(): Promise<Webhook[]>;
-    purge(options: PurgeChannelOptions): Promise<number>;
     removeMessageReactionEmoji(messageID: string, reaction: string): Promise<void>;
     removeMessageReactions(messageID: string): Promise<void>;
+    edit(options: EditGuildTextableChannelOptions, reason?: string): Promise<this>;
+  }
+  interface WebhookTextable extends GuildTextable {
+    createWebhook(options: WebhookCreateOptions, reason?: string): Promise<Webhook>;
+    getWebhooks(): Promise<Webhook[]>;
   }
   interface PartialChannel {
     bitrate?: number;
@@ -412,7 +453,14 @@ declare namespace Eris {
     type: number;
     user_limit?: number;
   }
+  interface Permissionable {
+    permissionOverwrites: Collection<PermissionOverwrite>;
+    position: number;
+    deletePermission(overwriteID: string, reason?: string): Promise<void>;
+    editPermission(overwriteID: string, allow: PermissionValueTypes, deny: PermissionValueTypes, type: PermissionType, reason?: string): Promise<PermissionOverwrite>;
+  }
   interface Pinnable {
+    lastPinTimestamp: number | null;
     getPins(): Promise<Message[]>;
     pinMessage(messageID: string): Promise<void>;
     unpinMessage(messageID: string): Promise<void>;
@@ -420,12 +468,12 @@ declare namespace Eris {
   interface PurgeChannelOptions {
     after?: string;
     before?: string;
-    filter?: (m: Message<GuildTextableChannel>) => boolean;
+    filter?: (m: Message<AnyGuildTextableChannel>) => boolean;
     limit: number;
     reason?: string;
   }
   interface Textable {
-    lastMessageID: string;
+    lastMessageID: string | null;
     messages: Collection<Message<this>>;
     addMessageReaction(messageID: string, reaction: string): Promise<void>;
     /** @deprecated */
@@ -439,21 +487,10 @@ declare namespace Eris {
     getMessageReaction(messageID: string, reaction: string, limit?: number, before?: string, after?: string): Promise<User[]>;
     getMessages(options?: GetMessagesOptions): Promise<Message<this>[]>;
     /** @deprecated */
-    getMessages(limit?: number, before?: string, after?: string, around?: string): Promise<Message[]>;
+    getMessages(limit?: number, before?: string, after?: string, around?: string): Promise<Message<this>[]>;
     removeMessageReaction(messageID: string, reaction: string, userID?: string): Promise<void>;
     sendTyping(): Promise<void>;
     unsendMessage(messageID: string): Promise<void>;
-  }
-  // @ts-ignore ts(2430) - ThreadTextable can't properly extend Textable because of getMessageReaction deprecated overload
-  interface ThreadTextable extends Textable, Pinnable {
-    lastPinTimestamp?: number;
-    deleteMessages(messageIDs: string[], reason?: string): Promise<void>;
-    getMembers(): Promise<ThreadMember[]>;
-    join(userID: string): Promise<void>;
-    leave(userID: string): Promise<void>;
-    purge(options: PurgeChannelOptions): Promise<number>;
-    removeMessageReactionEmoji(messageID: string, reaction: string): Promise<void>;
-    removeMessageReactions(messageID: string): Promise<void>;
   }
   interface WebhookData {
     channelID: string;
@@ -880,8 +917,8 @@ declare namespace Eris {
     threadMembersUpdate: [channel: AnyThreadChannel, addedMembers: ThreadMember[], removedMembers: (ThreadMember | Uncached)[]];
     threadMemberUpdate: [channel: AnyThreadChannel, member: ThreadMember, oldMember: OldThreadMember];
     threadUpdate: [channel: AnyThreadChannel, oldChannel: OldThread | null];
-    typingStart: [channel: GuildTextableChannel | Uncached, user: User | Uncached, member: Member]
-    | [channel: PrivateChannel | Uncached, user: User | Uncached, member: null];
+    typingStart: [channel: AnyGuildTextableChannel | Uncached, user: User | Uncached, member: Member]
+    | [channel: DMChannel | Uncached, user: User | Uncached, member: null];
     unavailableGuildCreate: [guild: UnavailableGuild];
     unknown: [packet: RawPacket, id?: number];
     userUpdate: [user: User, oldUser: PartialUser | null];
@@ -1300,12 +1337,7 @@ declare namespace Eris {
     command: Command;
     timeout: NodeJS.Timer;
   }
-  interface AdvancedMessageContent {
-    allowedMentions?: AllowedMentions;
-    components?: ActionRow[];
-    content?: string;
-    embed?: EmbedOptions;
-    embeds?: EmbedOptions[];
+  interface AdvancedMessageContent extends AdvancedMessageContentEdit {
     flags?: number;
     messageReference?: MessageReferenceReply;
     /** @deprecated */
@@ -1313,7 +1345,14 @@ declare namespace Eris {
     stickerIDs?: string[];
     tts?: boolean;
   }
-  interface AdvancedMessageContentEdit extends AdvancedMessageContent {
+  interface AdvancedMessageContentEdit {
+    allowedMentions?: AllowedMentions;
+    attachments?: PartialAttachment[];
+    components?: ActionRow[];
+    content?: string;
+    /** @deprecated */
+    embed?: EmbedOptions;
+    embeds?: EmbedOptions[];
     file?: FileContent | FileContent[];
   }
   interface AllowedMentions {
@@ -1645,8 +1684,11 @@ declare namespace Eris {
     url?: string;
     user?: PartialUser;
   }
-  interface WebhookOptions {
-    avatar?: string;
+  interface WebhookCreateOptions extends Omit<WebhookEditOptions, "channelID"> {
+    name: string;
+  }
+  interface WebhookEditOptions {
+    avatar?: string | null;
     channelID?: string;
     name?: string;
   }
@@ -1656,6 +1698,7 @@ declare namespace Eris {
     avatarURL?: string;
     components?: ActionRow[];
     content?: string;
+    /** @deprecated */
     embed?: EmbedOptions;
     embeds?: EmbedOptions[];
     file?: FileContent | FileContent[];
@@ -1800,9 +1843,9 @@ declare namespace Eris {
       LINK:      5;
     };
     ChannelFlags: {
-      PINNED: 1,
-      REQUIRE_TAG: 16
-    },
+      PINNED: 1;
+      REQUIRE_TAG: 16;
+    };
     ChannelTypes: {
       GUILD_TEXT:           0;
       DM:                   1;
@@ -1832,17 +1875,17 @@ declare namespace Eris {
       EVERYONE: 1;
     };
     ForumLayoutTypes: {
-      NOT_SET: 0,
-      LIST_VIEW: 1,
-      GALLERY_VIEW: 2
+      NOT_SET: 0;
+      LIST_VIEW: 1;
+      GALLERY_VIEW: 2;
     };
     DefaultMessageNotificationLevels: {
       ALL_MESSAGES:  0;
       ONLY_MENTIONS: 1;
     };
     SortOrderTypes: {
-      LATEST_ACTIVITY: 0,
-      CREATION_DATE: 1
+      LATEST_ACTIVITY: 0;
+      CREATION_DATE: 1;
     };
     ExplicitContentFilterLevels: {
       DISABLED:              0;
@@ -2096,6 +2139,9 @@ declare namespace Eris {
       NITRO_CLASSIC: 1;
       NITRO:         2;
     };
+    RoleFlags: {
+      IN_PROMPT: 1;
+    };
     StageInstancePrivacyLevel: {
       PUBLIC: 1;
       GUILD_ONLY: 2;
@@ -2345,19 +2391,20 @@ declare namespace Eris {
     constructor(data: BaseData, channel: GroupChannel);
   }
 
-  export class CategoryChannel extends GuildChannel {
+  export class CategoryChannel extends GuildChannel implements Permissionable {
     channels: Collection<Exclude<AnyGuildChannel, CategoryChannel>>;
+    permissionOverwrites: Collection<PermissionOverwrite>;
+    position: number;
     type: Constants["ChannelTypes"]["GUILD_CATEGORY"];
-    edit(options: Omit<CreateChannelOptions, "permissionOverwrites" | "reason">, reason?: string): Promise<this>;
+    deletePermission(overwriteID: string, reason?: string): Promise<void>;
+    editPermission(overwriteID: string, allow: PermissionValueTypes, deny: PermissionValueTypes, type: PermissionType, reason?: string): Promise<PermissionOverwrite>;
+    edit(options: EditChannelOptionsBase, reason?: string): Promise<this>;
   }
-
+  
   export class Channel extends Base {
-    client: Client;
-    createdAt: number;
-    id: string;
     mention: string;
     type: ChannelTypes;
-    constructor(data: BaseData, client: Client);
+    constructor(data: BaseData, client: Client)
     static from(data: BaseData, client: Client): AnyChannel;
   }
 
@@ -2365,6 +2412,8 @@ declare namespace Eris {
     application?: { id: string; flags: number };
     bot: boolean;
     channelGuildMap: { [s: string]: string };
+    dmChannelMap: { [s: string]: string };
+    dmChannels: Collection<DMChannel>;
     gatewayURL?: string;
     groupChannels: Collection<GroupChannel>;
     guilds: Collection<Guild>;
@@ -2375,7 +2424,7 @@ declare namespace Eris {
     options: ClientOptions;
     presence: ClientPresence;
     privateChannelMap: { [s: string]: string };
-    privateChannels: Collection<PrivateChannel>;
+    privateChannels: Collection<DMChannel>;
     ready: boolean;
     reconnectAttempts: number;
     relationships: Collection<Relationship>;
@@ -2562,7 +2611,7 @@ declare namespace Eris {
     editAFK(afk: boolean): void;
     editChannel(
       channelID: string,
-      options: EditChannelOptions,
+      options: EditGuildChannelOptions | EditGroupChannelOptions,
       reason?: string
     ): Promise<GroupChannel | AnyGuildChannel>;
     editChannelPermission(
@@ -2621,8 +2670,8 @@ declare namespace Eris {
       webhookID: string,
       token: string,
       messageID: string,
-      options: MessageWebhookContent
-    ): Promise<Message<GuildTextableChannel>>;
+      options: WebhookPayloadEdit
+    ): Promise<Message<AnyGuildTextableChannel>>;
     emit<K extends keyof ClientEvents>(event: K, ...args: ClientEvents[K]): boolean;
     emit(event: string, ...args: any[]): boolean;
     enableSelfMFATOTP(
@@ -2630,8 +2679,8 @@ declare namespace Eris {
       code: string
     ): Promise<{ backup_codes: { code: string; consumed: boolean }[]; token: string }>;
     executeSlackWebhook(webhookID: string, token: string, options: Record<string, unknown> & { auth?: boolean; threadID?: string }): Promise<void>;
-    executeSlackWebhook(webhookID: string, token: string, options: Record<string, unknown> & { auth?: boolean; threadID?: string; wait: true }): Promise<Message<GuildTextableChannel>>;
-    executeWebhook(webhookID: string, token: string, options: WebhookPayload & { wait: true }): Promise<Message<GuildTextableChannel>>;
+    executeSlackWebhook(webhookID: string, token: string, options: Record<string, unknown> & { auth?: boolean; threadID?: string; wait: true }): Promise<Message<AnyGuildTextableChannel>>;
+    executeWebhook(webhookID: string, token: string, options: WebhookPayload & { wait: true }): Promise<Message<AnyGuildTextableChannel>>;
     executeWebhook(webhookID: string, token: string, options: WebhookPayload): Promise<void>;
     followChannel(channelID: string, webhookChannelID: string): Promise<ChannelFollow>;
     getActiveGuildThreads(guildID: string): Promise<ListedGuildThreads>;
@@ -2649,7 +2698,7 @@ declare namespace Eris {
     getCommandPermissions(guildID: string, commandID: string): Promise<GuildApplicationCommandPermissions>;
     getCommands(): Promise<ApplicationCommand[]>;
     getDiscoveryCategories(): Promise<DiscoveryCategory[]>;
-    getDMChannel(userID: string): Promise<PrivateChannel>;
+    getDMChannel(userID: string): Promise<DMChannel>;
     getEmojiGuild(emojiID: string): Promise<Guild>;
     getGateway(): Promise<{ url: string }>;
     getGuildAuditLog(guildID: string, options?: GetGuildAuditLogOptions): Promise<GuildAuditLog>;
@@ -2747,7 +2796,7 @@ declare namespace Eris {
     getUserProfile(userID: string): Promise<UserProfile>;
     getVoiceRegions(guildID?: string): Promise<VoiceRegion[]>;
     getWebhook(webhookID: string, token?: string): Promise<Webhook>;
-    getWebhookMessage(webhookID: string, token: string, messageID: string): Promise<Message<GuildTextableChannel>>;
+    getWebhookMessage(webhookID: string, token: string, messageID: string): Promise<Message<AnyGuildTextableChannel>>;
     joinThread(channelID: string, userID?: string): Promise<void>;
     joinVoiceChannel(channelID: string, options?: JoinVoiceChannelOptions): Promise<VoiceConnection>;
     kickGuildMember(guildID: string, userID: string, reason?: string): Promise<void>;
@@ -2765,7 +2814,7 @@ declare namespace Eris {
     purgeChannel(
       channelID: string,
       limit?: number,
-      filter?: (m: Message<GuildTextableChannel>) => boolean,
+      filter?: (m: Message<AnyGuildTextableChannel>) => boolean,
       before?: string,
       after?: string,
       reason?: string
@@ -2890,6 +2939,35 @@ declare namespace Eris {
     flattenErrors(errors: HTTPResponse, keyPrefix?: string): string[];
   }
 
+  export class DMChannel extends Channel implements Pinnable, Textable {
+    lastMessageID: string | null;
+    lastPinTimestamp: number | null;
+    messages: Collection<Message<this>>;
+    recipients: Collection<User>;
+    type: Constants["ChannelTypes"]["DM"];
+    constructor(data: BaseData, client: Client);
+    addMessageReaction(messageID: string, reaction: string, userID?: string): Promise<void>;
+    createMessage(content: MessageContent, file: FileContent | FileContent[]): Promise<Message<this>>;
+    delete(): Promise<DMChannel>;
+    deleteMessage(messageID: string): Promise<void>;
+    editMessage(messageID: string, content: MessageContentEdit): Promise<Message<this>>;
+    getMessage(messageID: string): Promise<Message<this>>;
+    getMessageReaction(messageID: string, reaction: string, options: GetMessageReactionOptions): Promise<User[]>;
+    /** @deprecated */
+    getMessageReaction(messageID: string, reaction: string, limit?: number, before?: string, after?: string): Promise<User[]>;
+    getMessages(options: GetMessagesOptions): Promise<Message<this>[]>;
+    /** @deprecated */
+    getMessages(limit?: number, before?: string, after?: string, around?: string): Promise<Message<this>[]>;
+    getPins(): Promise<Message<this>[]>;
+    pinMessage(messageID: string): Promise<void>;
+    removeMessageReaction(messageID: string, reaction: string): Promise<void>;
+    /** @deprecated */
+    removeMessageReaction(messageID: string, reaction: string, userID?: string): Promise<void>;
+    sendTyping(): Promise<void>;
+    unpinMessage(messageID: string): Promise<void>;
+    unsendMessage(messageID: string): Promise<void>;
+  }
+
   export class ExtendedUser extends User {
     email: string;
     mfaEnabled: boolean;
@@ -2897,35 +2975,47 @@ declare namespace Eris {
     verified: boolean;
   }
 
-  export class ForumChannel extends GuildChannel {
+  export class ForumChannel extends GuildChannel implements Invitable, Permissionable {
     availableTags: ForumTag[];
     defaultAutoArchiveDuration: AutoArchiveDuration;
     defaultForumLayout: ForumLayoutTypes;
     defaultReactionEmoji: DefaultReactionEmoji;
     defaultSortOrder: SortOrderTypes;
     defaultThreadRateLimitPerUser: number;
-    lastMessageID: string;
+    edit(options: EditForumChannelOptions, reason?: string): Promise<this>;
+    lastMessageID: string | null;
+    nsfw: boolean;
+    permissionOverwrites: Collection<PermissionOverwrite>;
+    position: number;
     rateLimitPerUser: number;
     threads: PublicThreadChannel<true>[];
     topic?: string;
     createInvite(options?: CreateInviteOptions, reason?: string): Promise<Invite<"withMetadata", this>>;
     createThread(options: CreateForumThreadOptions, file?: FileContent | FileContent[]): Promise<PublicThreadChannel<true>>;
     createWebhook(options: WebhookCreateOptions, reason?: string): Promise<Webhook>;
+    deletePermission(overwriteID: string, reason?: string): Promise<void>;
+    edit(options: EditForumChannelOptions, reason?: string): Promise<this>;
+    editPermission(overwriteID: string, allow: PermissionValueTypes, deny: PermissionValueTypes, type: PermissionType, reason?: string): Promise<PermissionOverwrite>;
     getArchivedThreads(options?: GetArchivedThreadsOptions): Promise<ListedChannelThreads<PublicThreadChannel<true>>>;
     getInvites(): Promise<Invite<"withMetadata", this>[]>;
     getWebhooks(): Promise<Webhook[]>;
   }
-
-  export class GroupChannel extends PrivateChannel {
+  
+  export class GroupChannel extends Channel {
+    applicationID: string;
     icon: string | null;
     iconURL: string | null;
+    lastMessageID: string | null;
+    lastPinTimestamp: number | null;
+    managed: boolean;
     name: string;
     ownerID: string;
     recipients: Collection<User>;
     type: Constants["ChannelTypes"]["GROUP_DM"];
-    addRecipient(userID: string): Promise<void>;
+    addRecipient(userID: string, options: GroupRecipientOptions): Promise<void>;
+    delete(): Promise<GroupChannel>;
     dynamicIconURL(format?: ImageFormat, size?: number): string | null;
-    edit(options: { icon?: string; name?: string; ownerID?: string }): Promise<GroupChannel>;
+    edit(options: EditGroupChannelOptions): Promise<GroupChannel>;
     removeRecipient(userID: string): Promise<void>;
   }
 
@@ -3115,36 +3205,23 @@ declare namespace Eris {
     id: string;
     member?: Member | Uncached;
     membersRemoved?: number;
-    message?: Message<GuildTextableChannel>;
+    message?: Message<AnyGuildTextableChannel> | Uncached;
     reason: string | null;
     role?: Role | { id: string; name: string };
-    target?: Guild | AnyGuildChannel | Member | Role | Invite | Emoji | Sticker | Message<GuildTextableChannel> | null;
+    target?: Guild | AnyGuildChannel | Member | Role | Invite | Emoji | Sticker | Message<AnyGuildTextableChannel> | null;
     targetID: string;
     user: User;
     constructor(data: BaseData, guild: Guild);
   }
 
   export class GuildChannel extends Channel {
+    flags: number;
     guild: Guild;
     name: string;
-    flags?: number;
     parentID: string | null;
-    permissionOverwrites: Collection<PermissionOverwrite>;
-    position: number;
     type: GuildChannelTypes;
-    constructor(data: BaseData, client: Client);
-    delete(reason?: string): Promise<void>;
-    deletePermission(overwriteID: string, reason?: string): Promise<void>;
-    edit(options: Omit<EditChannelOptions, "icon" | "ownerID">, reason?: string): Promise<this>;
-    editPermission(
-      overwriteID: string,
-      allow: bigint | number,
-      deny: bigint | number,
-      type: PermissionType,
-      reason?: string
-    ): Promise<PermissionOverwrite>;
-    editPosition(position: number, options?: EditChannelPositionOptions): Promise<void>;
-    getInvites(): Promise<Invite[]>;
+    delete(reason?: string): Promise<AnyGuildChannel>;
+    edit(options: EditGuildChannelOptions, reason?: string): Promise<this>;
     permissionsOf(memberID: string | Member | MemberRoles): Permission;
   }
 
@@ -3231,17 +3308,19 @@ declare namespace Eris {
     toJSON(props?: string[]): JSONCache;
   }
 
-  export class TextVoiceChannel extends VoiceChannel implements GuildTextable {
-    lastMessageID: string;
+  export class GuildTextableChannel extends GuildChannel implements GuildTextable {
+    lastMessageID: string | null;
     messages: Collection<Message<this>>;
     rateLimitPerUser: number;
+    types: GuildTextChannelTypes | GuildVoiceChannelTypes | GuildThreadChannelTypes;
+    constructor(data: BaseData, client: Client, messageLimit?: number);
     addMessageReaction(messageID: string, reaction: string): Promise<void>;
     /** @deprecated */
-    addMessageReaction(messageID: string, reaction: string, userID: string): Promise<void>;
+    addMessageReaction(messageID: string, reaction: string, userID?: string): Promise<void>;
     createMessage(content: MessageContent, file?: FileContent | FileContent[]): Promise<Message<this>>;
-    createWebhook(options: { name: string; avatar?: string | null }, reason?: string): Promise<Webhook>;
     deleteMessage(messageID: string, reason?: string): Promise<void>;
     deleteMessages(messageIDs: string[], reason?: string): Promise<void>;
+    edit(options: EditGuildTextableChannelOptions, reason?: string): Promise<this>;
     editMessage(messageID: string, content: MessageContentEdit): Promise<Message<this>>;
     getMessage(messageID: string): Promise<Message<this>>;
     getMessageReaction(messageID: string, reaction: string, options?: GetMessageReactionOptions): Promise<User[]>;
@@ -3249,14 +3328,28 @@ declare namespace Eris {
     getMessageReaction(messageID: string, reaction: string, limit?: number, before?: string, after?: string): Promise<User[]>;
     getMessages(options?: GetMessagesOptions): Promise<Message<this>[]>;
     /** @deprecated */
-    getMessages(limit?: number, before?: string, after?: string, around?: string): Promise<Message[]>;
-    getWebhooks(): Promise<Webhook[]>;
+    getMessages(limit?: number, before?: string, after?: string, around?: string): Promise<Message<this>[]>;
     purge(options: PurgeChannelOptions): Promise<number>;
+    /** @deprecated */
+    purge(limit: number, filter?: (message: Message<this>) => boolean, before?: string, after?: string, reason?: string): Promise<number>;
     removeMessageReaction(messageID: string, reaction: string, userID?: string): Promise<void>;
     removeMessageReactionEmoji(messageID: string, reaction: string): Promise<void>;
     removeMessageReactions(messageID: string): Promise<void>;
     sendTyping(): Promise<void>;
     unsendMessage(messageID: string): Promise<void>;
+  }
+
+  //Interactions
+  export class AutocompleteInteraction<T extends PossiblyUncachedTextable = TextableChannel> extends Interaction {
+    appPermissions?: Permission;
+    channel: T;
+    data: AutocompleteInteractionData;
+    guildID?: string;
+    member?: Member;
+    type: Constants["InteractionTypes"]["APPLICATION_COMMAND_AUTOCOMPLETE"];
+    user?: User;
+    acknowledge(choices: ApplicationCommandOptionChoice[]): Promise<void>;
+    result(choices: ApplicationCommandOptionChoice[]): Promise<void>;
   }
   export class Interaction extends Base {
     acknowledged: boolean;
@@ -3525,21 +3618,12 @@ declare namespace Eris {
   }
 
   // News channel rate limit is always 0
-  export class NewsChannel extends TextChannel implements GuildPinnable {
+  export class NewsChannel extends TextChannel {
     rateLimitPerUser: 0;
     type: Constants["ChannelTypes"]["GUILD_NEWS"];
-    createInvite(options?: CreateInviteOptions, reason?: string): Promise<Invite<"withMetadata", this>>;
-    createMessage(content: MessageContent, file?: FileContent | FileContent[]): Promise<Message<this>>;
-    createThreadWithMessage(messageID: string, options: CreateThreadOptions): Promise<NewsThreadChannel>;
     crosspostMessage(messageID: string): Promise<Message<this>>;
-    editMessage(messageID: string, content: MessageContentEdit): Promise<Message<this>>;
+    edit(options: EditNewsChannelOptions, reason?: string): Promise<this>;
     follow(webhookChannelID: string): Promise<ChannelFollow>;
-    getInvites(): Promise<Invite<"withMetadata", this>[]>;
-    getMessage(messageID: string): Promise<Message<this>>;
-    getMessages(options?: GetMessagesOptions): Promise<Message<this>[]>;
-    /** @deprecated */
-    getMessages(limit?: number, before?: string, after?: string, around?: string): Promise<Message<this>[]>;
-    getPins(): Promise<Message<this>[]>;
   }
 
   export class NewsThreadChannel extends ThreadChannel {
@@ -3578,37 +3662,6 @@ declare namespace Eris {
     stop(e: Error, source: Duplex): void;
   }
 
-  export class PrivateChannel extends Channel implements Textable, Pinnable {
-    lastMessageID: string;
-    messages: Collection<Message<this>>;
-    recipient: User;
-    type: PrivateChannelTypes;
-    addMessageReaction(messageID: string, reaction: string): Promise<void>;
-    /** @deprecated */
-    addMessageReaction(messageID: string, reaction: string, userID: string): Promise<void>;
-    createMessage(content: MessageContent, file?: FileContent | FileContent[]): Promise<Message<this>>;
-    deleteMessage(messageID: string, reason?: string): Promise<void>;
-    editMessage(messageID: string, content: MessageContentEdit): Promise<Message<this>>;
-    getMessage(messageID: string): Promise<Message<this>>;
-    getMessageReaction(messageID: string, reaction: string, options?: GetMessageReactionOptions): Promise<User[]>;
-    /** @deprecated */
-    getMessageReaction(messageID: string, reaction: string, limit?: number, before?: string, after?: string): Promise<User[]>;
-    getMessages(options?: GetMessagesOptions): Promise<Message<this>[]>;
-    /** @deprecated */
-    getMessages(limit?: number, before?: string, after?: string, around?: string): Promise<Message<this>[]>;
-    getPins(): Promise<Message<this>[]>;
-    leave(): Promise<void>;
-    pinMessage(messageID: string): Promise<void>;
-    removeMessageReaction(messageID: string, reaction: string): Promise<void>;
-    /** @deprecated */
-    removeMessageReaction(messageID: string, reaction: string, userID: string): Promise<void>;
-    ring(recipient: string[]): void;
-    sendTyping(): Promise<void>;
-    syncCall(): void;
-    unpinMessage(messageID: string): Promise<void>;
-    unsendMessage(messageID: string): Promise<void>;
-  }
-
   export class PrivateThreadChannel extends ThreadChannel {
     threadMetadata: PrivateThreadMetadata;
     type: Constants["ChannelTypes"]["GUILD_PRIVATE_THREAD"];
@@ -3618,7 +3671,6 @@ declare namespace Eris {
   export class PublicThreadChannel<T = false> extends ThreadChannel {
     appliedTags: T extends true ? string[] : never;
     type: GuildPublicThreadChannelTypes;
-    edit(options: Pick<EditChannelOptions, "archived" | "autoArchiveDuration" | "locked" | "name" | "rateLimitPerUser">, reason?: string): Promise<this>;
   }
 
   export class Relationship extends Base implements Omit<Presence, "activities"> {
@@ -3811,101 +3863,52 @@ declare namespace Eris {
     update(data: BaseData): void;
   }
 
-  export class StoreChannel extends GuildChannel {
-    type: Constants["ChannelTypes"]["GUILD_STORE"];
-    edit(options: Omit<EditChannelOptions, "icon" | "ownerID">, reason?: string): Promise<this>;
-  }
-
-  export class TextChannel extends GuildChannel implements GuildTextable, Invitable, GuildPinnable {
+  export class TextChannel extends GuildTextableChannel implements Invitable, Permissionable, Pinnable, WebhookTextable {
     defaultAutoArchiveDuration: AutoArchiveDuration;
-    lastMessageID: string;
     lastPinTimestamp: number | null;
-    messages: Collection<Message<this>>;
-    rateLimitPerUser: number;
-    topic?: string | null;
+    nsfw: boolean;
+    permissionOverwrites: Collection<PermissionOverwrite>;
+    position: number;
+    topic: string | null;
     type: GuildTextChannelTypes;
-    constructor(data: BaseData, client: Client, messageLimit: number);
-    addMessageReaction(messageID: string, reaction: string): Promise<void>;
-    /** @deprecated */
-    addMessageReaction(messageID: string, reaction: string, userID: string): Promise<void>;
-    createInvite(options?: CreateInviteOptions, reason?: string): Promise<Invite<"withMetadata", this>>;
-    createMessage(content: MessageContent, file?: FileContent | FileContent[]): Promise<Message<this>>;
-    createThread(options: CreateThreadWithoutMessageOptions): Promise<NewsThreadChannel | PrivateThreadChannel | PublicThreadChannel>;
+    createInvite(options?: CreateChannelInviteOptions, reason?: string): Promise<Invite<"withMetadata", this>>;
+    createThread(options: CreateThreadWithoutMessageOptions): Promise<AnyThreadChannel>;
     createThreadWithMessage(messageID: string, options: CreateThreadOptions): Promise<NewsThreadChannel | PublicThreadChannel>;
     /** @deprecated */
-    createThreadWithoutMessage(options: CreateThreadWithoutMessageOptions): Promise<NewsThreadChannel | PrivateThreadChannel | PublicThreadChannel>;
-    createWebhook(options: WebhookCreateOptions, reason?: string): Promise<Webhook>;
-    deleteMessage(messageID: string, reason?: string): Promise<void>;
-    deleteMessages(messageIDs: string[], reason?: string): Promise<void>;
-    edit(options: Omit<EditChannelOptions, "icon" | "ownerID">, reason?: string): Promise<this>;
-    editMessage(messageID: string, content: MessageContentEdit): Promise<Message<this>>;
-    /** @deprecated */
-    getActiveThreads(): Promise<ListedChannelThreads>;
+    createThreadWithoutMessage(options: CreateThreadWithoutMessageOptions): Promise<AnyThreadChannel>;
+    createWebhook(options: WebhookCreateOptions, reason?: string | undefined): Promise<Webhook>;
+    deletePermission(overwriteID: string, reason?: string): Promise<void>;
+    edit(options: EditTextChannelOptions, reason?: string): Promise<this>;
+    editPermission(overwriteID: string, allow: PermissionValueTypes, deny: PermissionValueTypes, type: PermissionType, reason?: string): Promise<PermissionOverwrite>;
     getArchivedThreads(type: "private", options?: GetArchivedThreadsOptions): Promise<ListedChannelThreads<PrivateThreadChannel>>;
     getArchivedThreads(type: "public", options?: GetArchivedThreadsOptions): Promise<ListedChannelThreads<PublicThreadChannel>>;
     getInvites(): Promise<Invite<"withMetadata", this>[]>;
     getJoinedPrivateArchivedThreads(options: GetArchivedThreadsOptions): Promise<ListedChannelThreads<PrivateThreadChannel>>;
-    getMessage(messageID: string): Promise<Message<this>>;
-    getMessageReaction(messageID: string, reaction: string, options?: GetMessageReactionOptions): Promise<User[]>;
-    /** @deprecated */
-    getMessageReaction(messageID: string, reaction: string, limit?: number, before?: string, after?: string): Promise<User[]>;
-    getMessages(options?: GetMessagesOptions): Promise<Message<this>[]>;
-    /** @deprecated */
-    getMessages(limit?: number, before?: string, after?: string, around?: string): Promise<Message<this>[]>;
     getPins(): Promise<Message<this>[]>;
     getWebhooks(): Promise<Webhook[]>;
     pinMessage(messageID: string): Promise<void>;
-    purge(options: PurgeChannelOptions): Promise<number>;
-    /** @deprecated */
-    purge(limit: number, filter?: (message: Message<this>) => boolean, before?: string, after?: string, reason?: string): Promise<number>;
-    removeMessageReaction(messageID: string, reaction: string, userID?: string): Promise<void>;
-    removeMessageReactionEmoji(messageID: string, reaction: string): Promise<void>;
-    removeMessageReactions(messageID: string): Promise<void>;
-    sendTyping(): Promise<void>;
     unpinMessage(messageID: string): Promise<void>;
-    unsendMessage(messageID: string): Promise<void>;
   }
 
-  export class ThreadChannel extends GuildChannel implements ThreadTextable {
-    lastMessageID: string;
-    lastPinTimestamp?: number;
+  export class ThreadChannel extends GuildTextableChannel implements Pinnable {
+    lastPinTimestamp: number | null;
     member?: ThreadMember;
     memberCount: number;
     members: Collection<ThreadMember>;
     messageCount: number;
-    messages: Collection<Message<this>>;
     ownerID: string;
-    parentID: string;
-    rateLimitPerUser: number;
     threadMetadata: ThreadMetadata;
     totalMessageSent: number;
     type: GuildThreadChannelTypes;
-    constructor(data: BaseData, client: Client, messageLimit?: number);
-    addMessageReaction(messageID: string, reaction: string): Promise<void>;
-    createMessage(content: MessageContent, file?: FileContent | FileContent[]): Promise<Message<this>>;
-    deleteMessage(messageID: string, reason?: string): Promise<void>;
-    deleteMessages(messageIDs: string[], reason?: string): Promise<void>;
-    edit(options: Pick<EditChannelOptions, "archived" | "autoArchiveDuration" | "invitable" | "locked" | "name" | "rateLimitPerUser">, reason?: string): Promise<this>;
-    editMessage(messageID: string, content: MessageContentEdit): Promise<Message<this>>;
+    constructor(data: BaseData, client: Client);
+    edit(options: EditThreadChannelOptions, reason?: string): Promise<this>;
+    getMember(userID: string, withMember?: boolean): Promise<ThreadMember>;
     getMembers(): Promise<ThreadMember[]>;
-    getMessage(messageID: string): Promise<Message<this>>;
-    getMessageReaction(messageID: string, reaction: string, options?: GetMessageReactionOptions): Promise<User[]>;
-    /** @deprecated */
-    getMessageReaction(messageID: string, reaction: string, limit?: number, before?: string, after?: string): Promise<User[]>;
-    getMessages(options?: GetMessagesOptions): Promise<Message<this>[]>;
-    /** @deprecated */
-    getMessages(limit?: number, before?: string, after?: string, around?: string): Promise<Message<this>[]>;
     getPins(): Promise<Message<this>[]>;
     join(userID?: string): Promise<void>;
     leave(userID?: string): Promise<void>;
     pinMessage(messageID: string): Promise<void>;
-    purge(options: PurgeChannelOptions): Promise<number>;
-    removeMessageReaction(messageID: string, reaction: string, userID?: string): Promise<void>;
-    removeMessageReactionEmoji(messageID: string, reaction: string): Promise<void>;
-    removeMessageReactions(messageID: string): Promise<void>;
-    sendTyping(): Promise<void>;
     unpinMessage(messageID: string): Promise<void>;
-    unsendMessage(messageID: string): Promise<void>;
   }
 
   export class ThreadMember extends Base {
@@ -3949,20 +3952,46 @@ declare namespace Eris {
     dynamicAvatarURL(format?: ImageFormat, size?: number): string;
     dynamicBannerURL(format?: ImageFormat, size?: number): string | null;
     editNote(note: string): Promise<void>;
-    getDMChannel(): Promise<PrivateChannel>;
+    getDMChannel(): Promise<DMChannel>;
     getProfile(): Promise<UserProfile>;
     removeRelationship(): Promise<void>;
   }
 
-  export class VoiceChannel extends GuildChannel implements Invitable {
+  export class VoiceChannel extends GuildChannel implements Invitable, Permissionable, WebhookTextable {
+    rateLimitPerUser: number;
+    removeMessageReactionEmoji(messageID: string, reaction: string): Promise<void>;
+    removeMessageReactions(messageID: string): Promise<void>;
+    lastMessageID: string | null;
+    messages: Collection<Message<this>>;
+    addMessageReaction(messageID: string, reaction: string): Promise<void>;
+    addMessageReaction(messageID: string, reaction: string, userID: string): Promise<void>;
+    createMessage(content: MessageContent, file?: FileContent | FileContent[] | undefined): Promise<Message<this>>;
+    createWebhook(options: WebhookCreateOptions, reason?: string | undefined): Promise<Webhook>;
+    deleteMessage(messageID: string, reason?: string | undefined): Promise<void>;
+    editMessage(messageID: string, content: MessageContentEdit): Promise<Message<this>>;
+    getMessage(messageID: string): Promise<Message<this>>;
+    getMessageReaction(messageID: string, reaction: string, options?: GetMessageReactionOptions | undefined): Promise<User[]>;
+    getMessageReaction(messageID: string, reaction: string, limit?: number | undefined, before?: string | undefined, after?: string | undefined): Promise<User[]>;
+    getMessages(options?: GetMessagesOptions | undefined): Promise<Message<this>[]>;
+    getMessages(limit?: number | undefined, before?: string | undefined, after?: string | undefined, around?: string | undefined): Promise<Message<this>[]>;
+    getWebhooks(): Promise<Webhook[]>;
+    removeMessageReaction(messageID: string, reaction: string, userID?: string | undefined): Promise<void>;
+    sendTyping(): Promise<void>;
+    unsendMessage(messageID: string): Promise<void>;
     bitrate: number;
+    nsfw: boolean;
+    permissionOverwrites: Collection<PermissionOverwrite>;
+    position: number;
     rtcRegion: string | null;
-    type: TextVoiceChannelTypes;
+    type: GuildVoiceChannelTypes;
     userLimit: number;
     videoQualityMode: VideoQualityMode;
     voiceMembers: Collection<Member>;
-    createInvite(options?: CreateInviteOptions, reason?: string): Promise<Invite<"withMetadata", VoiceChannel>>;
-    getInvites(): Promise<Invite<"withMetadata", VoiceChannel>[]>;
+    createInvite(options?: CreateInviteOptions, reason?: string): Promise<Invite<"withMetadata", this>>;
+    deletePermission(overwriteID: string, reason?: string): Promise<void>;
+    edit(options: EditVoiceChannelOptions, reason?: string): Promise<this>;
+    editPermission(overwriteID: string, allow: PermissionValueTypes, deny: PermissionValueTypes, type: PermissionType, reason?: string): Promise<PermissionOverwrite>;
+    getInvites(): Promise<Invite<"withMetadata", this>[]>;
     join(options?: JoinVoiceChannelOptions): Promise<VoiceConnection>;
     leave(): void;
   }
